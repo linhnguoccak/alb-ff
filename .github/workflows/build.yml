@@ -22,10 +22,9 @@ jobs:
 
       - name: Install NDK and CMake
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager "ndk;25.2.9519653" "cmake;3.22.1"
-        env:
-          ANDROID_HOME: /usr/local/lib/android/sdk
+          SDKMANAGER=/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager
+          yes | $SDKMANAGER --licenses
+          $SDKMANAGER "ndk;25.2.9519653" "cmake;3.22.1"
 
       - name: Build APK
         run: gradle assembleDebug
