@@ -16,11 +16,12 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Download gradle wrapper jar
+      - name: Generate Gradle wrapper
         run: |
-          mkdir -p gradle/wrapper
-          wget -q https://github.com/gradle/gradle/raw/v8.2.0/gradle/wrapper/gradle-wrapper.jar \
-               -O gradle/wrapper/gradle-wrapper.jar
+          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip
+          unzip -q gradle-8.2-bin.zip
+          ./gradle-8.2/bin/gradle wrapper --gradle-version 8.2
+          rm -rf gradle-8.2 gradle-8.2-bin.zip
 
       - name: Setup Android SDK + NDK
         run: |
