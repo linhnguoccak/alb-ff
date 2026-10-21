@@ -14,14 +14,14 @@ class OverlayService : Service() {
     private lateinit var cheatView: CheatView
     private var running = true
 
-    private val FF_PKG       = "com.dts.freefireth"
-    private val BONE_HEAD    = 0x1C8L
-    private val ENTITY_STEP  = 0x2A0L
-    private val MAX_ENT      = 32
-    private val VIEW_MATRIX  = 0L   // điền sau khi scan
+    private val FF_PKG      = "com.dts.freefireth"
+    private val BONE_HEAD   = 0x1C8L
+    private val ENTITY_STEP = 0x2A0L
+    private val MAX_ENT     = 32
+    private val VIEW_MATRIX = 0L
 
-    private var pid         = -1
-    private var entityBase  = -1L
+    private var pid        = -1
+    private var entityBase = -1L
 
     override fun onCreate() {
         super.onCreate()
@@ -35,51 +35,62 @@ class OverlayService : Service() {
         menuView  = MenuView(this)
         cheatView = CheatView(this, menuView)
 
-        val baseFlags = (WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN)
+        val flagBase = (WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+            or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN)
 
-        wm.addView(cheatView, WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            baseFlags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            PixelFormat.TRANSLUCENT
-        ))
+        val flagPass = (flagBase
+            or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
 
-        val menuParams = WindowManager.LayoutParams(
-    WindowManager.LayoutParams.MATCH_PARENT,
-    WindowManager.LayoutParams.MATCH_PARENT,
-    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-    baseFlags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-    PixelFormat.TRANSLUCENT
-)
-        ))
+        val flagMenu = (flagBase
+            or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
+
+        wm.addView(
+            cheatView,
+            WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                flagPass,
+                PixelFormat.TRANSLUCENT
+            )
+        )
+
+        wm.addView(
+            menuView,
+            WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                flagMenu,
+                PixelFormat.TRANSLUCENT
+            )
+        )
     }
 
     private fun loop() {
-        // tìm PID
         while (pid == -1 && running) {
             pid = MemoryBridge.findPid(FF_PKG)
             Thread.sleep(1000)
         }
 
-        // scan entity base
         entityBase = MemoryBridge.patternScan(
             pid,
-            byteArrayOf(0xA0.toByte(), 0x00, 0x00, 0x00,
-                        0x00, 0x00, 0x80.toByte(), 0x3F),
+            byteArrayOf(
+                0xA0.toByte(), 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x80.toByte(), 0x3F
+            ),
             "x???xxxx",
             0x70000000L,
             0x90000000L
         )
 
         while (running) {
-            val f = menuView.features
+            val f        = menuView.features
             val aimbotOn = f[0].enabled
             val espAny   = f[1].enabled || f[2].enabled || f[3].enabled
 
             if ((aimbotOn || espAny) && entityBase != -1L) {
-                val list = mutableListOf<CheatView.Entity>()
+                val list     = mutableListOf<CheatView.Entity>()
                 var closestD = Float.MAX_VALUE
                 var aimT: Pair<Float, Float>? = null
 
@@ -89,7 +100,7 @@ class OverlayService : Service() {
                     if (head[0] == 0f && head[1] == 0f) continue
 
                     val screen = w2s(head[0], head[1], head[2]) ?: continue
-                    val dist   = 80f  // placeholder
+                    val dist   = 80f
 
                     val h = (300f / dist * 10f).coerceIn(40f, 400f)
                     list.add(CheatView.Entity(screen.first, screen.second, h, dist))
@@ -99,7 +110,8 @@ class OverlayService : Service() {
                         val dy = screen.second - cheatView.height * 0.45f
                         val d  = Math.hypot(dx.toDouble(), dy.toDouble()).toFloat()
                         if (d < 350f && d < closestD) {
-                            closestD = d; aimT = screen
+                            closestD = d
+                            aimT     = screen
                         }
                     }
                 }
@@ -131,8 +143,10 @@ class OverlayService : Service() {
     }
 
     private fun buildNotif(): Notification {
-        val ch = NotificationChannel("alb", "ALB",
-            NotificationManager.IMPORTANCE_LOW)
+        val ch = NotificationChannel(
+            "alb", "ALB",
+            NotificationManager.IMPORTANCE_LOW
+        )
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
             .createNotificationChannel(ch)
         return Notification.Builder(this, "alb")
@@ -142,9 +156,10 @@ class OverlayService : Service() {
     }
 
     override fun onBind(intent: Intent?) = null
+
     override fun onDestroy() {
         running = false
-        wm.removeView(cheatView)
-        wm.removeView(menuView)
+        try { wm.removeView(cheatView) } catch (_: Exception) {}
+        try { wm.removeView(menuView)  } catch (_: Exception) {}
     }
 }
