@@ -31,12 +31,8 @@ android {
     }
 
     buildTypes {
-        release {
-            isMinifyEnabled = false
-        }
-        debug {
-            isMinifyEnabled = false
-        }
+        release { isMinifyEnabled = false }
+        debug   { isMinifyEnabled = false }
     }
 
     compileOptions {
@@ -48,9 +44,6 @@ android {
     }
 }
 
-dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-}
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("dev.rikka.shizuku:api:13.1.5")
