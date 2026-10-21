@@ -11,9 +11,9 @@ import kotlin.concurrent.thread
 class OverlayService : Service() {
 
     private lateinit var wm: WindowManager
-    private lateinit var menuView:   MenuView
-    private lateinit var cheatView:  CheatView
-    private lateinit var toggleBtn:  ToggleButton
+    private lateinit var menuView:  MenuView
+    private lateinit var cheatView: CheatView
+    private lateinit var toggleBtn: ToggleButton
     private var running = true
 
     private val FF_PKG      = "com.dts.freefireth"
@@ -25,8 +25,8 @@ class OverlayService : Service() {
     private var pid        = -1
     private var entityBase = -1L
 
-    private var menuX  = 30;  private var menuY  = 200
-    private var btnX   = 20;  private var btnY   = 600
+    private var menuX = 30;  private var menuY = 200
+    private var btnX  = 20;  private var btnY  = 600
 
     private lateinit var menuParams: WindowManager.LayoutParams
     private lateinit var btnParams:  WindowManager.LayoutParams
@@ -44,7 +44,6 @@ class OverlayService : Service() {
         menuView  = MenuView(this)
         toggleBtn = ToggleButton(this)
 
-        // ESP layer — full screen, no touch
         wm.addView(cheatView, WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -55,7 +54,6 @@ class OverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ))
 
-        // Menu — wrap content, chỉ chặn touch đúng vùng menu
         menuParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -70,7 +68,6 @@ class OverlayService : Service() {
         }
         wm.addView(menuView, menuParams)
 
-        // Toggle button — nút tắt/bật menu
         btnParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -85,7 +82,6 @@ class OverlayService : Service() {
         }
         wm.addView(toggleBtn, btnParams)
 
-        // Kéo menu
         menuView.onDrag = { dx, dy ->
             menuX = (menuX + dx.toInt()).coerceIn(0, 900)
             menuY = (menuY + dy.toInt()).coerceIn(0, 1700)
@@ -93,7 +89,6 @@ class OverlayService : Service() {
             wm.updateViewLayout(menuView, menuParams)
         }
 
-        // Kéo nút toggle
         toggleBtn.onDrag = { dx, dy ->
             btnX = (btnX + dx.toInt()).coerceIn(0, 950)
             btnY = (btnY + dy.toInt()).coerceIn(0, 1800)
@@ -101,23 +96,32 @@ class OverlayService : Service() {
             wm.updateViewLayout(toggleBtn, btnParams)
         }
 
-        // Tap nút toggle → ẩn/hiện menu
         toggleBtn.onTap = {
             val show = !toggleBtn.menuVisible
             toggleBtn.menuVisible = show
             menuView.visibility = if (show)
-                android.view.View.VISIBLE else android.view.View.GONE
+                android.view.View.VISIBLE
+            else
+                android.view.View.GONE
             toggleBtn.invalidate()
         }
     }
 
     private fun loop() {
+        // chờ Shizuku sẵn sàng
+        var retry = 0
+        while (!ShizukuMemory.isAvailable() && retry < 30) {
+            Thread.sleep(1000); retry++
+        }
+
+        // tìm PID
         while (pid == -1 && running) {
-            pid = MemoryBridge.findPid(FF_PKG)
+            pid = ShizukuMemory.findPid(FF_PKG)
             Thread.sleep(1000)
         }
 
-        entityBase = MemoryBridge.patternScan(
+        // scan entity base
+        entityBase = ShizukuMemory.patternScan(
             pid,
             byteArrayOf(0xA0.toByte(), 0x00, 0x00, 0x00,
                         0x00, 0x00, 0x80.toByte(), 0x3F),
@@ -137,30 +141,36 @@ class OverlayService : Service() {
 
                 for (i in 0 until MAX_ENT) {
                     val hAddr = entityBase + i * ENTITY_STEP + BONE_HEAD
-                    val head  = MemoryBridge.readVec3(pid, hAddr)
+                    val head  = ShizukuMemory.readVec3(pid, hAddr)
                     if (head[0] == 0f && head[1] == 0f) continue
+
                     val screen = w2s(head[0], head[1], head[2]) ?: continue
                     val dist   = 80f
                     val h      = (300f / dist * 10f).coerceIn(40f, 400f)
                     list.add(CheatView.Entity(screen.first, screen.second, h, dist))
+
                     if (aimbotOn) {
                         val dx = screen.first  - cheatView.width  / 2f
                         val dy = screen.second - cheatView.height * 0.45f
                         val d  = Math.hypot(dx.toDouble(), dy.toDouble()).toFloat()
-                        if (d < 350f && d < closestD) { closestD = d; aimT = screen }
+                        if (d < 350f && d < closestD) {
+                            closestD = d; aimT = screen
+                        }
                     }
                 }
+
                 cheatView.entities  = list
                 cheatView.aimTarget = aimT
                 cheatView.postInvalidate()
             }
+
             Thread.sleep(50)
         }
     }
 
     private fun w2s(wx: Float, wy: Float, wz: Float): Pair<Float, Float>? {
         if (VIEW_MATRIX == 0L) return null
-        val m = MemoryBridge.readMatrix(pid, VIEW_MATRIX)
+        val m = ShizukuMemory.readMatrix(pid, VIEW_MATRIX)
         if (m.size < 16) return null
         val cx = m[0]*wx + m[4]*wy + m[8]*wz  + m[12]
         val cy = m[1]*wx + m[5]*wy + m[9]*wz  + m[13]
@@ -185,6 +195,7 @@ class OverlayService : Service() {
     }
 
     override fun onBind(intent: Intent?) = null
+
     override fun onDestroy() {
         running = false
         try { wm.removeView(cheatView) } catch (_: Exception) {}
