@@ -19,16 +19,17 @@ class MenuView(context: Context) : View(context) {
         Feature("FOV Circle"),
     )
 
-    private var posX = 30f
-    private var posY = 200f
-    private var dragOffX = 0f
-    private var dragOffY = 0f
-    private var dragging = false
+    val menuW  = 260f
+    val header = 44f
+    val rowH   = 44f
+    val menuH  get() = header + features.size * rowH + 12f
 
-    private val W      = 260f
-    private val HEADER = 44f
-    private val ROW    = 44f
-    private val H get() = HEADER + features.size * ROW + 12f
+    // callback khi kéo — OverlayService cập nhật WM
+    var onDrag: ((dx: Float, dy: Float) -> Unit)? = null
+
+    private var lastX = 0f
+    private var lastY = 0f
+    private var isDragging = false
 
     private val bgPaint = Paint().apply {
         color = Color.argb(220, 8, 8, 18)
@@ -69,53 +70,47 @@ class MenuView(context: Context) : View(context) {
     }
 
     override fun onDraw(canvas: Canvas) {
-        val rect = RectF(posX, posY, posX + W, posY + H)
+        val rect = RectF(0f, 0f, menuW, menuH)
         canvas.drawRoundRect(rect, 14f, 14f, bgPaint)
         canvas.drawRoundRect(rect, 14f, 14f, borderPaint)
-        canvas.drawText("ALB  FF  OB55", posX + 16f, posY + 30f, titlePaint)
+        canvas.drawText("ALB  FF  OB55", 16f, 30f, titlePaint)
 
         features.forEachIndexed { i, feat ->
-            val ry = posY + HEADER + i * ROW
-            canvas.drawCircle(posX + 20f, ry + 20f,
+            val ry = header + i * rowH
+            canvas.drawCircle(20f, ry + 20f,
                 6f, if (feat.enabled) dotOn else dotOff)
-            canvas.drawText(feat.name, posX + 36f, ry + 27f,
+            canvas.drawText(feat.name, 36f, ry + 27f,
                 if (feat.enabled) onPaint else offPaint)
-            canvas.drawLine(posX + 10f, ry + ROW - 1f,
-                posX + W - 10f, ry + ROW - 1f, divPaint)
+            canvas.drawLine(10f, ry + rowH - 1f,
+                menuW - 10f, ry + rowH - 1f, divPaint)
         }
     }
 
     override fun onTouchEvent(ev: MotionEvent): Boolean {
-        val tx = ev.rawX; val ty = ev.rawY
-        fun inBounds() = tx in posX..(posX + W) && ty in posY..(posY + H)
-
         when (ev.action) {
             MotionEvent.ACTION_DOWN -> {
-                if (!inBounds()) return false
-                if (ty < posY + HEADER) {
-                    dragging = true
-                    dragOffX = tx - posX
-                    dragOffY = ty - posY
-                }
+                lastX = ev.rawX
+                lastY = ev.rawY
+                isDragging = ev.y < header
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
-                if (dragging) {
-                    posX = tx - dragOffX
-                    posY = ty - dragOffY
-                    invalidate()
+                if (isDragging) {
+                    onDrag?.invoke(ev.rawX - lastX, ev.rawY - lastY)
+                    lastX = ev.rawX
+                    lastY = ev.rawY
                 }
                 return true
             }
             MotionEvent.ACTION_UP -> {
-                if (dragging) { dragging = false; return true }
-                if (inBounds()) {
-                    val idx = ((ty - posY - HEADER) / ROW).toInt()
+                if (!isDragging) {
+                    val idx = ((ev.y - header) / rowH).toInt()
                     if (idx in features.indices) {
                         features[idx].enabled = !features[idx].enabled
                         invalidate()
                     }
                 }
+                isDragging = false
                 return true
             }
         }
