@@ -26,7 +26,7 @@ class CheatView(context: Context, private val menu: MenuView?) : View(context) {
     }
 
     override fun onDraw(canvas: Canvas) {
-        val f = menu?.features ?: return
+        val f       = menu?.features ?: return
         val espBox  = f.getOrNull(1)?.enabled == true
         val espName = f.getOrNull(2)?.enabled == true
         val espDist = f.getOrNull(3)?.enabled == true
@@ -43,28 +43,23 @@ class CheatView(context: Context, private val menu: MenuView?) : View(context) {
                 Color.argb(255, 0, 220, 100)
             boxPaint.color = color
 
-            val bw   = e.height * 0.4f
-            val left = e.sx - bw / 2f
-            val top  = e.sy - e.height
+            val bw     = e.height * 0.4f
+            val left   = e.sx - bw / 2f
+            val top    = e.sy - e.height
             val right  = e.sx + bw / 2f
             val bottom = e.sy
 
             if (espBox) {
                 canvas.drawRect(left, top, right, bottom, boxPaint)
                 val ca = bw * 0.25f
-                // corner top-left
-                canvas.drawLine(left, top, left + ca, top, acPaint)
-                canvas.drawLine(left, top, left, top + ca, acPaint)
-                // corner top-right
-                canvas.drawLine(right, top, right - ca, top, acPaint)
-                canvas.drawLine(right, top, right, top + ca, acPaint)
-                // corner bot-left
-                canvas.drawLine(left, bottom, left + ca, bottom, acPaint)
-                canvas.drawLine(left, bottom, left, bottom - ca, acPaint)
-                // corner bot-right
-                canvas.drawLine(right, bottom, right - ca, bottom, acPaint)
-                canvas.drawLine(right, bottom, right, bottom - ca, acPaint)
-                // snapline
+                canvas.drawLine(left,  top,    left+ca, top,    acPaint)
+                canvas.drawLine(left,  top,    left,    top+ca, acPaint)
+                canvas.drawLine(right, top,    right-ca,top,    acPaint)
+                canvas.drawLine(right, top,    right,   top+ca, acPaint)
+                canvas.drawLine(left,  bottom, left+ca, bottom, acPaint)
+                canvas.drawLine(left,  bottom, left,    bottom-ca, acPaint)
+                canvas.drawLine(right, bottom, right-ca,bottom, acPaint)
+                canvas.drawLine(right, bottom, right,   bottom-ca, acPaint)
                 canvas.drawLine(width / 2f, height.toFloat(), e.sx, e.sy, snapPaint)
             }
 
