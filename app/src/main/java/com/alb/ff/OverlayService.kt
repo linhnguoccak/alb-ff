@@ -31,6 +31,13 @@ class OverlayService : Service() {
     private lateinit var menuParams: WindowManager.LayoutParams
     private lateinit var btnParams:  WindowManager.LayoutParams
 
+    private val OVERLAY_TYPE =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        else
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+
     override fun onCreate() {
         super.onCreate()
         startForeground(1, buildNotif())
@@ -47,7 +54,7 @@ class OverlayService : Service() {
         wm.addView(cheatView, WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            OVERLAY_TYPE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                 or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                 or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -57,7 +64,7 @@ class OverlayService : Service() {
         menuParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            OVERLAY_TYPE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                 or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -71,7 +78,7 @@ class OverlayService : Service() {
         btnParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            OVERLAY_TYPE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                 or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -108,19 +115,11 @@ class OverlayService : Service() {
     }
 
     private fun loop() {
-        // chờ Shizuku sẵn sàng
-        var retry = 0
-        while (!ShizukuMemory.isAvailable() && retry < 30) {
-            Thread.sleep(1000); retry++
-        }
-
-        // tìm PID
         while (pid == -1 && running) {
             pid = ShizukuMemory.findPid(FF_PKG)
             Thread.sleep(1000)
         }
 
-        // scan entity base
         entityBase = ShizukuMemory.patternScan(
             pid,
             byteArrayOf(0xA0.toByte(), 0x00, 0x00, 0x00,
@@ -143,7 +142,6 @@ class OverlayService : Service() {
                     val hAddr = entityBase + i * ENTITY_STEP + BONE_HEAD
                     val head  = ShizukuMemory.readVec3(pid, hAddr)
                     if (head[0] == 0f && head[1] == 0f) continue
-
                     val screen = w2s(head[0], head[1], head[2]) ?: continue
                     val dist   = 80f
                     val h      = (300f / dist * 10f).coerceIn(40f, 400f)
