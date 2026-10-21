@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.*
 import android.view.View
 
-class CheatView(context: Context, private val menu: MenuView) : View(context) {
+class CheatView(context: Context, private val menu: MenuView?) : View(context) {
 
     data class Entity(
         val sx: Float, val sy: Float,
@@ -26,7 +26,7 @@ class CheatView(context: Context, private val menu: MenuView) : View(context) {
     }
 
     override fun onDraw(canvas: Canvas) {
-        val f = menu.features
+        val f = menu?.features ?: return
         val espBox  = f.getOrNull(1)?.enabled == true
         val espName = f.getOrNull(2)?.enabled == true
         val espDist = f.getOrNull(3)?.enabled == true
