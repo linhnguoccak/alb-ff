@@ -24,13 +24,5 @@
             android:foregroundServiceType="specialUse"
             android:exported="false"/>
 
-        <provider
-            android:name="rikka.shizuku.ShizukuProvider"
-            android:authorities="com.alb.ff.shizuku"
-            android:multiprocess="false"
-            android:enabled="true"
-            android:exported="true"
-            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"/>
-
     </application>
 </manifest>
