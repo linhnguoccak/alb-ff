@@ -51,3 +51,8 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
 }
+dependencies {
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
+}
