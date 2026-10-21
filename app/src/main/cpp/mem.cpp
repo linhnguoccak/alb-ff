@@ -4,22 +4,28 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
-#include <sys/uio.h>
 #include <vector>
 #include <algorithm>
 
+// đọc/ghi qua /proc/pid/mem thay vì process_vm_readv
 static bool readMem(int pid, long addr, void* buf, size_t size) {
-    struct iovec l = { buf, size };
-    struct iovec r = { reinterpret_cast<void*>(addr), size };
-    return process_vm_readv(pid, &l, 1, &r, 1, 0)
-           == static_cast<ssize_t>(size);
+    char path[64];
+    snprintf(path, sizeof(path), "/proc/%d/mem", pid);
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) return false;
+    ssize_t n = pread(fd, buf, size, addr);
+    close(fd);
+    return n == (ssize_t)size;
 }
 
 static bool writeMem(int pid, long addr, const void* buf, size_t size) {
-    struct iovec l = { const_cast<void*>(buf), size };
-    struct iovec r = { reinterpret_cast<void*>(addr), size };
-    return process_vm_writev(pid, &l, 1, &r, 1, 0)
-           == static_cast<ssize_t>(size);
+    char path[64];
+    snprintf(path, sizeof(path), "/proc/%d/mem", pid);
+    int fd = open(path, O_WRONLY);
+    if (fd < 0) return false;
+    ssize_t n = pwrite(fd, buf, size, addr);
+    close(fd);
+    return n == (ssize_t)size;
 }
 
 extern "C" {
@@ -84,8 +90,8 @@ Java_com_alb_ff_MemoryBridge_patternScan(
     jint pid, jbyteArray jpat, jstring jmask,
     jlong rStart, jlong rEnd)
 {
-    jsize     plen = env->GetArrayLength(jpat);
-    jbyte*    pat  = env->GetByteArrayElements(jpat, nullptr);
+    jsize plen     = env->GetArrayLength(jpat);
+    jbyte* pat     = env->GetByteArrayElements(jpat, nullptr);
     const char* mask = env->GetStringUTFChars(jmask, nullptr);
 
     const size_t CHUNK = 0x10000;
