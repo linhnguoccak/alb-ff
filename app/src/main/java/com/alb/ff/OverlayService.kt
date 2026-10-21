@@ -46,12 +46,13 @@ class OverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ))
 
-        wm.addView(menuView, WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            baseFlags,
-            PixelFormat.TRANSLUCENT
+        val menuParams = WindowManager.LayoutParams(
+    WindowManager.LayoutParams.MATCH_PARENT,
+    WindowManager.LayoutParams.MATCH_PARENT,
+    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+    baseFlags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+    PixelFormat.TRANSLUCENT
+)
         ))
     }
 
