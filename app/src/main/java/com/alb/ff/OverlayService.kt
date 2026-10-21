@@ -23,6 +23,11 @@ class OverlayService : Service() {
     private var pid        = -1
     private var entityBase = -1L
 
+    // vị trí menu
+    private var menuX = 30
+    private var menuY = 200
+    private lateinit var menuParams: WindowManager.LayoutParams
+
     override fun onCreate() {
         super.onCreate()
         startForeground(1, buildNotif())
@@ -31,40 +36,50 @@ class OverlayService : Service() {
         thread { loop() }
     }
 
+    private fun dpToPx(dp: Float): Int =
+        (dp * resources.displayMetrics.density + 0.5f).toInt()
+
     private fun addViews() {
         menuView  = MenuView(this)
         cheatView = CheatView(this, menuView)
 
-        val flagBase = (WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-            or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN)
-
-        val flagPass = (flagBase
-            or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
-
-        val flagMenu = (flagBase
-            or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
-
-        wm.addView(
-            cheatView,
-            WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                flagPass,
-                PixelFormat.TRANSLUCENT
-            )
+        // ESP: full screen, không nhận touch
+        val espParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
         )
 
-        wm.addView(
-            menuView,
-            WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                flagMenu,
-                PixelFormat.TRANSLUCENT
-            )
-        )
+        // Menu: đúng kích thước menu, nhận touch chỉ trong vùng đó
+        menuParams = WindowManager.LayoutParams(
+            dpToPx(menuView.menuW),
+            dpToPx(menuView.menuH),
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            x = menuX
+            y = menuY
+        }
+
+        wm.addView(cheatView, espParams)
+        wm.addView(menuView, menuParams)
+
+        // kéo menu → cập nhật vị trí WM
+        menuView.onDrag = { dx, dy ->
+            menuX = (menuX + dx.toInt()).coerceIn(0, 900)
+            menuY = (menuY + dy.toInt()).coerceIn(0, 1700)
+            menuParams.x = menuX
+            menuParams.y = menuY
+            wm.updateViewLayout(menuView, menuParams)
+        }
     }
 
     private fun loop() {
@@ -101,8 +116,7 @@ class OverlayService : Service() {
 
                     val screen = w2s(head[0], head[1], head[2]) ?: continue
                     val dist   = 80f
-
-                    val h = (300f / dist * 10f).coerceIn(40f, 400f)
+                    val h      = (300f / dist * 10f).coerceIn(40f, 400f)
                     list.add(CheatView.Entity(screen.first, screen.second, h, dist))
 
                     if (aimbotOn) {
